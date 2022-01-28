@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+    adminer:
+        container_name: adminer
+        image: adminer
+        restart: always
+        ports:
+            - 8000:8080
+        depends_on:
+            - mariadb
+        networks:
+            - elastic
+    php:
+        container_name: php
+        image: php
+        restart: on-failure
+        build:
+            context: .
+            dockerfile: Dockerfile
+            target: base
+        hostname: web.local
+        depends_on:
+            - mariadb
+        environment:
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        ports:
+            - ${PORT}:80
+        networks:
+            - elastic
+    mariadb:
+        container_name: mariadb
+        image: mariadb
+        environment:
+            MYSQL_RANDOM_ROOT_PASSWORD: "YES"
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        ports:
+            - 3306:3306
+        networks:
+            - elastic
+        restart: on-failure
+        user: ${UID}:${GID}
+        volumes:
+            - /mnt/${PWD}/mariadb:/var/lib/mysql
+            # All scripts in docker-entrypoint-initdb.d/ are automatically
+            # executed during container startup
+            - /mnt/${PWD}/database/db.sql:/docker-entrypoint-initdb.d/db.sql
+
+networks:
+  elastic:
+    driver: bridge
